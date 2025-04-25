@@ -27,16 +27,6 @@ def fetch_image():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/')
-def index():
-    return '''
-        <h2>DALL·E Share</h2>
-        <form method="post" action="/make-public">
-            <input type="text" name="url" placeholder="Paste your DALL·E image URL" size="80">
-            <button type="submit">Make Public</button>
-        </form>
-    '''
-
 @app.route('/make-public', methods=['POST'])
 def make_public():
     image_url = request.form.get("url")
@@ -57,6 +47,23 @@ def make_public():
         '''
     except Exception as e:
         return f"<p>Error: {e}</p>"
+
+@app.route('/make-public-json', methods=['POST'])
+def make_public_json():
+    image_url = request.json.get("url")
+    try:
+        response = requests.get(image_url, stream=True)
+        response.raise_for_status()
+
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        for chunk in response.iter_content(1024):
+            temp_file.write(chunk)
+        temp_file.close()
+
+        public_url = f"https://dalle-image-share.onrender.com/serve-temp?filename={os.path.basename(temp_file.name)}"
+        return jsonify({"public_url": public_url})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/serve-temp')
 def serve_temp():
